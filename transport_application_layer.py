@@ -91,7 +91,7 @@ if __name__ == "__main__":
     simulator.send_data(devices[0], "Test data for routing", simulator.connections[0])
 
     # Test Transport Layer
-    tcp = TCP(window_size=4)
+    tcp = TCP(window_size=2)
     udp = UDP()
 
     # Test Application Layer Services
@@ -107,5 +107,5 @@ if __name__ == "__main__":
     ftp_service.send_data("FTP Test Data", tcp)
 
     # Simulate receiving acknowledgments for TCP
-    for i in range(5):
+    for i in range(2):
         tcp.receive_ack(i)

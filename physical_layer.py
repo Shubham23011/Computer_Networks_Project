@@ -89,9 +89,11 @@ if __name__ == "__main__":
     devices = [simulator.create_device("end_device") for _ in range(5)]
     hub2 = simulator.create_device("hub")
 
+    con = []
     for device in devices:
         conn = simulator.create_connection(device, hub2)
+        con.append(conn)
         hub2.add_device(device)
 
     for i, device in enumerate(devices):
-        simulator.send_data(device, f"Message from device {i+1}", conn)
+        simulator.send_data(device, f"Message from device {i+1}", con[i])
