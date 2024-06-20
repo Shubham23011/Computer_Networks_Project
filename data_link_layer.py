@@ -43,14 +43,42 @@ class Switch(Device):
                 if device.device_id != frame.source_mac:
                     device.receive_data(frame.data)
 
-# Error Control Protocol: Parity Check
-def parity_check(data):
-    return data + str(data.count('1') % 2)
+# CRC Error Control Protocol
+def xor(a, b):
+    result = []
+    for i in range(1, len(b)):
+        if a[i] == b[i]:
+            result.append('0')
+        else:
+            result.append('1')
+    return ''.join(result)
 
-def verify_parity(data_with_parity):
-    data = data_with_parity[:-1]
-    parity = data_with_parity[-1]
-    return parity == str(data.count('1') % 2)
+def mod2div(dividend, divisor):
+    pick = len(divisor)
+    tmp = dividend[0:pick]
+    while pick < len(dividend):
+        if tmp[0] == '1':
+            tmp = xor(divisor, tmp) + dividend[pick]
+        else:
+            tmp = xor('0' * pick, tmp) + dividend[pick]
+        pick += 1
+    if tmp[0] == '1':
+        tmp = xor(divisor, tmp)
+    else:
+        tmp = xor('0' * pick, tmp)
+    checkword = tmp
+    return checkword
+
+def encode_data(data, key):
+    l_key = len(key)
+    appended_data = data + '0' * (l_key - 1)
+    remainder = mod2div(appended_data, key)
+    codeword = data + remainder
+    return codeword
+
+def verify_crc(data, key):
+    remainder = mod2div(data, key)
+    return int(remainder) == 0
 
 # Access Control Protocol: CSMA/CD
 def csma_cd(send_func):
@@ -113,9 +141,9 @@ def transmission(i, N, tf, send_func_gbn):
         i += z
     return tt
 
-def send_data_with_parity(data, connection):
-    data_with_parity = parity_check(data)
-    connection.transmit_data(data_with_parity, None)
+def send_data_with_crc(data, connection, key):
+    data_with_crc = encode_data(data, key)
+    connection.transmit_data(data_with_crc, None)
 
 # Testing Data Link Layer Functionalities
 if __name__ == "__main__":
@@ -130,11 +158,12 @@ if __name__ == "__main__":
     frame = Frame(devices[0].device_id, devices[1].device_id, "Frame data")
     switch.forward_frame(frame)
 
-    # Test Parity Check
+    # Test CRC
     data = "1010101"
-    data_with_parity = parity_check(data)
-    print(f"Data with parity: {data_with_parity}")
-    print(f"Parity verification: {verify_parity(data_with_parity)}")
+    key = "1101"
+    data_with_crc = encode_data(data, key)
+    print(f"Data with CRC: {data_with_crc}")
+    print(f"CRC verification: {verify_crc(data_with_crc, key)}")
 
     # Test CSMA/CD
     device1 = simulator.create_device("end_device")
