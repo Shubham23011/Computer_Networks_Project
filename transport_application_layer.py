@@ -8,9 +8,13 @@ class TransportLayer:
     def __init__(self):
         self.port_table = {}
 
-    def assign_port(self, process_name, port_type='well-known'):
-        if port_type == 'well-known':
-            port = random.randint(0, 1023)
+    def assign_port(self, process_name):
+        if process_name == 'Telnet':
+            port = 23
+        elif process_name == 'FTP Command':
+            port = 21  # Control connection port for FTP
+        elif process_name == 'FTP Data':
+            port = 20  # Data connection port for FTP
         else:
             port = random.randint(1024, 65535)
         self.port_table[port] = process_name
@@ -37,7 +41,7 @@ class UDP:
 class Telnet:
     def __init__(self, transport_layer):
         self.transport_layer = transport_layer
-        self.port = self.transport_layer.assign_port('Telnet', 'well-known')
+        self.port = self.transport_layer.assign_port('Telnet')
 
     def connect(self, destination_port):
         print(f"Connecting to Telnet service on port {destination_port}")
@@ -51,16 +55,23 @@ class Telnet:
 class FTP:
     def __init__(self, transport_layer):
         self.transport_layer = transport_layer
-        self.port = self.transport_layer.assign_port('FTP', 'well-known')
+        self.control_port = self.transport_layer.assign_port('FTP Command')
+        self.data_port = self.transport_layer.assign_port('FTP Data')
 
     def connect(self, destination_port):
         print(f"Connecting to FTP service on port {destination_port}")
 
-    def send_data(self, data, tcp_connection):
-        tcp_connection.send(data, self.send_func)
+    def send_command(self, command, tcp_connection):
+        tcp_connection.send(command, self.send_command_func)
 
-    def send_func(self, data, seq_num):
-        print(f"FTP sending data: {data} with sequence number: {seq_num}")
+    def send_data(self, data, tcp_connection):
+        tcp_connection.send(data, self.send_data_func)
+
+    def send_command_func(self, data, seq_num):
+        print(f"FTP command sending data: {data} with sequence number: {seq_num}")
+
+    def send_data_func(self, data, seq_num):
+        print(f"FTP data sending data: {data} with sequence number: {seq_num}")
 
 # Testing the Full Protocol Stack
 if __name__ == "__main__":
@@ -100,11 +111,12 @@ if __name__ == "__main__":
 
     # Connect Telnet and FTP services to destination ports
     telnet_service.connect(telnet_service.port)
-    ftp_service.connect(ftp_service.port)
+    ftp_service.connect(ftp_service.control_port)
 
     # Send data using Telnet and FTP services
     telnet_service.send_data("Telnet Test Data", tcp)
-    ftp_service.send_data("FTP Test Data", tcp)
+    ftp_service.send_command("FTP Command Test Data", tcp)
+    ftp_service.send_data("FTP Data Test Data", tcp)
 
     # Simulate receiving acknowledgments for TCP
     for i in range(2):
