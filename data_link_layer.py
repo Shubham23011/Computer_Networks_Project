@@ -1,5 +1,6 @@
 import uuid
 import random
+import time
 from physical_layer import *
 
 class Frame:
@@ -18,7 +19,7 @@ class Bridge(Device):
 
     def forward_frame(self, frame, incoming_port):
         for port, device in self.ports.items():
-            if port!= incoming_port:
+            if port != incoming_port:
                 device.receive_data(frame.data)
 
 class Switch(Device):
@@ -39,7 +40,7 @@ class Switch(Device):
             self.ports[port].receive_data(frame.data)
         else:
             for port, device in self.ports.items():
-                if device.device_id!= frame.source_mac:
+                if device.device_id != frame.source_mac:
                     device.receive_data(frame.data)
 
 # Error Control Protocol: Parity Check
@@ -91,6 +92,27 @@ class SlidingWindow:
         else:
             print(f"Invalid acknowledgment: {ack_num}")
 
+# Go-Back-N ARQ Protocol
+def transmission(i, N, tf, send_func_gbn):
+    tt = 0
+    while i <= tf:
+        z = 0
+        for k in range(i, min(i + N, tf + 1)):
+            send_func_gbn(f"Data {k}", k)
+            tt += 1
+        for k in range(i, min(i + N, tf + 1)):
+            f = random.randint(0, 1)
+            if not f:
+                print(f"Acknowledgment for Frame {k}...")
+                z += 1
+            else:
+                print(f"Timeout!! Frame Number: {k} Not Received")
+                print("Retransmitting Window...")
+                break
+        print("\n")
+        i += z
+    return tt
+
 def send_data_with_parity(data, connection):
     data_with_parity = parity_check(data)
     connection.transmit_data(data_with_parity, None)
@@ -124,13 +146,14 @@ if __name__ == "__main__":
 
     csma_cd(send_func)
 
-    # Define send_func_gbn for Sliding Window
+    # Define send_func_gbn for Sliding Window and Go-Back-N ARQ
     def send_func_gbn(data, seq_num):
         print(f"Sending data: {data} with sequence number: {seq_num}")
+        simulator.send_data(device1, data, conn1)
 
-    # Test Sliding Window (Go-Back-N ARQ)
-    window = SlidingWindow(window_size=3)
-    for i in range(10):
-        window.send(f"Data {i}", send_func_gbn)
-        if i % 3 == 0 and i!= 0:
-            window.receive_ack(i - 3)
+    # Test Sliding Window (Go-Back-N ARQ) using transmission function
+    tf = 5  # Total number of frames
+    N = 3  # Window size
+    i = 1
+    total_transmissions = transmission(i, N, tf, send_func_gbn)
+    print(f"Total number of frames which were sent and resent are: {total_transmissions}")
